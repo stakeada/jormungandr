@@ -1,5 +1,8 @@
 use crate::common::jcli_wrapper;
-use crate::common::jcli_wrapper::Discrimination;
+
+use chain_addr::Discrimination;
+use chain_crypto::{bech32::Bech32, Ed25519Extended};
+use chain_impl_mockchain::testing::address::AddressData;
 
 #[test]
 pub fn test_info_unknown_address_public_key() {
@@ -9,43 +12,42 @@ pub fn test_info_unknown_address_public_key() {
 
 #[test]
 pub fn test_info_account_address() {
-    let private_key = jcli_wrapper::assert_key_generate("ed25519Extended");
-    let public_key = jcli_wrapper::assert_key_to_public_default(&private_key);
-    let account_address = jcli_wrapper::assert_address_account(&public_key, Discrimination::Test);
-    let info = jcli_wrapper::assert_get_address_info(&account_address);
+    let account_address = AddressData::account(Discrimination::Test);
+
+    let info = jcli_wrapper::assert_get_address_info(&account_address.to_bech32_str());
     assert_eq!(
         info.get("discrimination").unwrap(),
         "testing",
         "wrong discrimination"
     );
-    assert_eq!(info.get("account").unwrap(), &public_key, "wrong address");
+    assert_eq!(
+        info.get("account").unwrap(),
+        &account_address.public_key().to_bech32_str(),
+        "wrong address"
+    );
 }
 
 #[test]
 pub fn test_info_account_address_for_prod() {
-    let private_key = jcli_wrapper::assert_key_generate("ed25519Extended");
-    let public_key = jcli_wrapper::assert_key_to_public_default(&private_key);
-    let account_address =
-        jcli_wrapper::assert_address_account(&public_key, Discrimination::Production);
-    let info = jcli_wrapper::assert_get_address_info(&account_address);
+    let account_address = AddressData::account(Discrimination::Production);
+
+    let info = jcli_wrapper::assert_get_address_info(&account_address.to_bech32_str());
     assert_eq!(
         info.get("discrimination").unwrap(),
         "production",
         "wrong discrimination"
     );
-    assert_eq!(info.get("account").unwrap(), &public_key, "wrong address");
+    assert_eq!(
+        info.get("account").unwrap(),
+        &account_address.public_key().to_bech32_str(),
+        "wrong address"
+    );
 }
 
 #[test]
 pub fn test_info_delegation_address() {
-    let private_key = jcli_wrapper::assert_key_generate("ed25519Extended");
-    let public_key = jcli_wrapper::assert_key_to_public_default(&private_key);
-
-    let private_key = jcli_wrapper::assert_key_generate("ed25519Extended");
-    let delegation_key = jcli_wrapper::assert_key_to_public_default(&private_key);
-    let account_address =
-        jcli_wrapper::assert_address_delegation(&public_key, &delegation_key, Discrimination::Test);
-    let info = jcli_wrapper::assert_get_address_info(&account_address);
+    let delegation_address = AddressData::delegation(Discrimination::Test);
+    let info = jcli_wrapper::assert_get_address_info(&delegation_address.to_bech32_str());
     assert_eq!(
         info.get("discrimination").unwrap(),
         "testing",
@@ -53,12 +55,12 @@ pub fn test_info_delegation_address() {
     );
     assert_eq!(
         info.get("public key").unwrap(),
-        &public_key,
+        &delegation_address.public_key().to_bech32_str(),
         "wrong public key"
     );
     assert_eq!(
         info.get("group key").unwrap(),
-        &delegation_key,
+        &delegation_address.delegation_key().to_bech32_str(),
         "wrong group key"
     );
 }

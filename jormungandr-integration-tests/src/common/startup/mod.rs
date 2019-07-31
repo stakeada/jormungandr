@@ -13,7 +13,7 @@ use jormungandr_lib::interfaces::UTxOInfo;
 use std::path::PathBuf;
 
 use crate::common::jcli_wrapper;
-use crate::common::jcli_wrapper::Discrimination;
+use chain_addr::Discrimination;
 
 pub use self::configuration_builder::ConfigurationBuilder;
 
