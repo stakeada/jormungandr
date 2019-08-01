@@ -1,5 +1,6 @@
 use super::logger::JormungandrLogger;
 use crate::common::configuration::jormungandr_config::JormungandrConfig;
+use crate::common::jcli_wrapper;
 use std::path::PathBuf;
 use std::process::Child;
 
