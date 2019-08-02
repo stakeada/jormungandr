@@ -230,18 +230,40 @@ pub fn get_settings(context: State<Context>) -> Result<impl Responder, Error> {
     let settings = ledger.settings();
     let fees = *settings.linear_fees;
 
-    Ok(Json(json!({
-        "block0Hash": static_params.block0_initial_hash.to_string(),
-        "block0Time": SystemTime::from_secs_since_epoch(static_params.block0_start_time.0),
-        "currSlotStartTime": context.stats_counter.slot_start_time().map(SystemTime::from),
-        "consensusVersion": settings.consensus_version.to_string(),
-        "fees":{
-            "constant": fees.constant,
-            "coefficient": fees.coefficient,
-            "certificate": fees.certificate,
+    Ok(Json(SettingsDto {
+        block0_hash: static_params.block0_initial_hash.to_string(),
+        block0_time: SystemTime::from_secs_since_epoch(static_params.block0_start_time.0),
+        curr_slot_start_time: context
+            .stats_counter
+            .slot_start_time()
+            .map(SystemTime::from),
+        consensus_version: settings.consensus_version.to_string(),
+        fees: SettingsFeesDto {
+            constant: fees.constant,
+            coefficient: fees.coefficient,
+            certificate: fees.certificate,
         },
-        "maxTxsPerBlock":  settings.max_number_of_transactions_per_block,
-    })))
+        max_txs_per_block: settings.max_number_of_transactions_per_block,
+    }))
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsDto {
+    pub block0_hash: String,
+    pub block0_time: SystemTime,
+    pub curr_slot_start_time: Option<SystemTime>,
+    pub consensus_version: String,
+    pub fees: SettingsFeesDto,
+    pub max_txs_per_block: u32,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SettingsFeesDto {
+    constant: u64,
+    coefficient: u64,
+    certificate: u64,
 }
 
 pub fn get_shutdown(context: State<Context>) -> Result<impl Responder, Error> {
