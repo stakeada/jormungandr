@@ -43,7 +43,9 @@ impl JormungandrLogger {
         let expected_task = Some("block".to_string());
         self.get_log_entries()
             .filter(|x| {
-                x.msg == "block added successfully to Node's blockchain" && x.task == expected_task
+                x.msg == "block added successfully to Node's blockchain"
+                    && x.task.is_some()
+                    && x.task.clone().unwrap() == "block"
             })
             .count()
     }
