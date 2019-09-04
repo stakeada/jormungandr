@@ -3,6 +3,12 @@ use crate::{
     fragment::{selection::FragmentSelectionAlgorithm, Fragment, Logs},
 };
 use chain_core::property::Fragment as _;
+use chain_impl_mockchain::transaction::{AuthenticatedTransaction, Balance};
+use chain_impl_mockchain::value::Value;
+use futures::future::{
+    self,
+    Either::{A, B},
+};
 use jormungandr_lib::interfaces::{FragmentLog, FragmentOrigin};
 use std::time::Duration;
 use tokio::{prelude::*, sync::lock::Lock, timer};
@@ -31,17 +37,22 @@ impl Pool {
         origin: FragmentOrigin,
         fragment: Fragment,
     ) -> impl Future<Item = bool, Error = ()> {
+        if !is_fragment_valid(&fragment) {
+            return A(future::ok(false));
+        }
         let mut pool_lock = self.pool.clone();
         let mut logs = self.logs.clone();
-        future::poll_fn(move || Ok(pool_lock.poll_lock())).and_then(move |mut pool| {
-            let id = fragment.id();
-            if pool.insert(fragment) == false {
-                return future::Either::A(future::ok(false));
-            }
-            let fragment_log = FragmentLog::new(id.into(), origin);
-            let insert_future = logs.insert(fragment_log).map(|_| true);
-            future::Either::B(insert_future)
-        })
+        B(
+            future::poll_fn(move || Ok(pool_lock.poll_lock())).and_then(move |mut pool| {
+                let id = fragment.id();
+                if pool.insert(fragment) == false {
+                    return A(future::ok(false));
+                }
+                let fragment_log = FragmentLog::new(id.into(), origin);
+                let insert_future = logs.insert(fragment_log).map(|_| true);
+                B(insert_future)
+            }),
+        )
     }
 
     /// Returns number of registered fragments
@@ -50,16 +61,22 @@ impl Pool {
         origin: FragmentOrigin,
         fragments: impl IntoIterator<Item = Fragment>,
     ) -> impl Future<Item = usize, Error = ()> {
+        let mut valid_fragments = fragments.into_iter().filter(is_fragment_valid).peekable();
+        if valid_fragments.peek().is_none() {
+            return A(future::ok(0));
+        }
         let mut pool_lock = self.pool.clone();
         let mut logs = self.logs.clone();
-        future::poll_fn(move || Ok(pool_lock.poll_lock())).and_then(move |mut pool| {
-            let fragment_ids = pool.insert_all(fragments);
-            let count = fragment_ids.len();
-            let fragment_logs = fragment_ids
-                .into_iter()
-                .map(move |id| FragmentLog::new(id.into(), origin));
-            logs.insert_all(fragment_logs).map(move |_| count)
-        })
+        B(
+            future::poll_fn(move || Ok(pool_lock.poll_lock())).and_then(move |mut pool| {
+                let fragment_ids = pool.insert_all(valid_fragments);
+                let count = fragment_ids.len();
+                let fragment_logs = fragment_ids
+                    .into_iter()
+                    .map(move |id| FragmentLog::new(id.into(), origin));
+                logs.insert_all(fragment_logs).map(move |_| count)
+            }),
+        )
     }
 
     pub fn poll_purge(&mut self) -> impl Future<Item = (), Error = timer::Error> {
@@ -90,6 +107,20 @@ impl Pool {
                 selection_alg.select(&ledger, &ledger_params, &metadata, &mut logs, &mut pool);
                 future::ok(selection_alg)
             })
+    }
+}
+
+fn is_fragment_valid(fragment: &Fragment) -> bool {
+    match fragment {
+        Fragment::Transaction(ref tx) => is_transaction_valid(tx),
+        _ => true,
+    }
+}
+
+fn is_transaction_valid<A, E>(tx: &AuthenticatedTransaction<A, E>) -> bool {
+    match tx.transaction.balance(Value::zero()) {
+        Ok(Balance::Positive(_)) | Ok(Balance::Zero) => true,
+        Ok(Balance::Negative(_)) | Err(_) => false,
     }
 }
 
