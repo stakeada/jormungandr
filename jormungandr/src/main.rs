@@ -17,6 +17,7 @@ extern crate custom_error;
 extern crate error_chain;
 #[macro_use(try_ready)]
 extern crate futures;
+extern crate hex;
 extern crate http;
 extern crate humantime;
 extern crate hyper;

@@ -28,6 +28,7 @@ imhamt = { path = "../chain-deps/imhamt" }
 custom_error = "1.7"
 error-chain = "0.12"
 futures    = "0.1"
+hex = "0.4"
 http = "0.1.16"
 humantime = "1.2"
 hyper = "0.12"
