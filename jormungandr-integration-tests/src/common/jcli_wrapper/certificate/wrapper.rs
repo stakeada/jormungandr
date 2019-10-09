@@ -10,6 +10,9 @@ use chain_impl_mockchain::{
     certificate::PoolId, key::EitherEd25519SecretKey,
     testing::builders::cert_builder::build_stake_pool_retirement_cert,
 };
+
+extern crate jcli;
+
 use jcli::jcli_app::utils::key_parser::parse_ed25519_secret_key;
 use std::path::PathBuf;
 use std::str::FromStr;
