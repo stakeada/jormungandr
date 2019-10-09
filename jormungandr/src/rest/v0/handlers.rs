@@ -4,6 +4,7 @@ use jormungandr_lib::time::SystemTime;
 use actix_web::error::{ErrorBadRequest, ErrorInternalServerError, ErrorNotFound};
 use actix_web::{Error, HttpResponse};
 use actix_web::{Json, Path, Query, Responder, State};
+use chain_addr::{Address, Kind};
 use chain_core::property::{Block, Deserialize, Serialize as _};
 use chain_crypto::{Blake2b256, PublicKey};
 use chain_impl_mockchain::account::{AccountAlg, Identifier};
@@ -60,9 +61,19 @@ pub fn get_account_state(context: State<Context>, account_id_hex: Path<String>) 
 }
 
 fn parse_account_id(id_hex: &str) -> Result<Identifier, Error> {
-    PublicKey::<AccountAlg>::from_str(id_hex)
-        .map(Into::into)
-        .map_err(|e| ErrorBadRequest(e))
+    let id_bytes = hex::decode(id_hex).map_err(ErrorBadRequest)?;
+    if let Ok(address) = Address::from_bytes(&id_bytes) {
+        match address.kind() {
+            Kind::Account(public_key) => Ok(public_key.clone().into()),
+            _ => Err(ErrorBadRequest("Requested address is not account address")),
+        }
+    } else if let Ok(public_key) = PublicKey::<AccountAlg>::from_binary(&id_bytes) {
+        Ok(public_key.into())
+    } else {
+        Err(ErrorBadRequest(
+            "Requested account ID is neither address nor public key",
+        ))
+    }
 }
 
 pub fn get_message_logs(context: State<Context>) -> ActixFuture!() {
