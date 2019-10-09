@@ -2,8 +2,6 @@ extern crate regex;
 extern crate serde;
 extern crate serde_json;
 
-use regex::Regex;
-
 use self::serde::{Deserialize, Serialize};
 use crate::common::file_utils;
 use chain_core::property::FromStr;
@@ -17,12 +15,19 @@ pub struct JormungandrLogger {
     pub log_file_path: PathBuf,
 }
 
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub enum Level {
+    WARN,
+    INFO,
+    ERRO,
+}
+
 // TODO: convert strings to enums for level/task/
 // TODO: convert ts to DateTime
 #[derive(Serialize, Deserialize)]
 pub struct LogEntry {
     pub msg: String,
-    pub level: String,
+    pub level: Level,
     pub ts: String,
     pub task: Option<String>,
     pub hash: Option<String>,
@@ -70,16 +75,16 @@ impl JormungandrLogger {
     }
 
     fn is_error_line(&self, line: &String) -> bool {
-        self.parse_line_as_entry(&line).level == "ERROR"
+        self.parse_line_as_entry(&line).level == Level::ERRO
     }
 
     fn is_warn_line(&self, line: &String) -> bool {
-        self.parse_line_as_entry(&line).level == "WARN"
+        self.parse_line_as_entry(&line).level == Level::WARN
     }
 
     fn is_error_line_or_invalid(&self, line: &String) -> bool {
         match self.try_parse_line_as_entry(&line) {
-            Ok(entry) => entry.level == "ERROR",
+            Ok(entry) => entry.level == Level::ERRO,
             Err(_) => true,
         }
     }
