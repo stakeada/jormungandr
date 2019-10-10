@@ -27,6 +27,7 @@ impl Account {
             output_format,
             account_id,
         } = self;
+        println!("ACCOUNT ID {:#?}", account_id);
         let url = addr
             .with_segments(&["v0", "account", &account_id.to_url_arg()])?
             .into_url();

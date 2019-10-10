@@ -2,11 +2,13 @@ use bech32::{Bech32, FromBase32};
 use chain_addr::{Address, Kind};
 use chain_crypto::{Ed25519, PublicKey};
 use chain_impl_mockchain::account;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct AccountId {
-    arg: String,
-    account: account::Identifier,
+    // arg: String,
+    bytes: Vec<u8>,
+    // account: account::Identifier,
 }
 
 fn id_from_pub(pk: PublicKey<Ed25519>) -> account::Identifier {
@@ -17,30 +19,9 @@ impl AccountId {
     // accept either an address with the account kind
     // or a ed25519 publickey
     pub fn try_from_str(src: &str) -> Result<Self, Error> {
-        use std::str::FromStr;
         if let Ok(b) = Bech32::from_str(src) {
-            let dat = Vec::from_base32(b.data()).unwrap();
-            if let Ok(addr) = Address::from_bytes(&dat) {
-                match addr.kind() {
-                    Kind::Account(pk) => Ok(Self {
-                        arg: src.to_string(),
-                        account: id_from_pub(pk.clone()),
-                    }),
-                    _ => Err(Error::AddressNotAccount {
-                        addr: src.to_string(),
-                        kind: format!("{:?}", addr.kind()),
-                    }),
-                }
-            } else if let Ok(pk) = PublicKey::from_binary(&dat) {
-                Ok(Self {
-                    arg: src.to_string(),
-                    account: id_from_pub(pk),
-                })
-            } else {
-                Err(Error::NotRecognized {
-                    addr: src.to_string(),
-                })
-            }
+            let bytes = Vec::from_base32(b.data()).unwrap();
+            Ok(Self { bytes })
         } else {
             Err(Error::NotRecognized {
                 addr: src.to_string(),
@@ -50,7 +31,10 @@ impl AccountId {
 
     // account id is encoded in hexadecimal in url argument
     pub fn to_url_arg(&self) -> String {
-        hex::encode(self.account.as_ref().as_ref())
+        // use std::str::FromStr;
+        // ;        hex::encode(Vec::from_base32(&Bech32::from_str(&self.arg).unwrap().data()).unwrap())
+        hex::encode(&self.bytes)
+        // ;hex::encode(self.account.as_ref().as_ref())
     }
 }
 

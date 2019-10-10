@@ -63,13 +63,16 @@ pub fn get_account_state(context: State<Context>, account_id_hex: Path<String>) 
 fn parse_account_id(id_hex: &str) -> Result<Identifier, Error> {
     let id_bytes = hex::decode(id_hex).map_err(ErrorBadRequest)?;
     if let Ok(address) = Address::from_bytes(&id_bytes) {
+        println!("ADDRESS");
         match address.kind() {
             Kind::Account(public_key) => Ok(public_key.clone().into()),
             _ => Err(ErrorBadRequest("Requested address is not account address")),
         }
     } else if let Ok(public_key) = PublicKey::<AccountAlg>::from_binary(&id_bytes) {
+        println!("PUB KEY");
         Ok(public_key.into())
     } else {
+        println!("NOTHING");
         Err(ErrorBadRequest(
             "Requested account ID is neither address nor public key",
         ))
