@@ -1,7 +1,9 @@
 use crate::scenario::settings::NodeSetting;
 use crate::{
     scenario::{settings::Settings, Blockchain, ContextChaCha, ErrorKind, Result, Topology},
-    style, MemPoolCheck, Node, NodeBlock0, NodeController, Wallet,
+    style, MemPoolCheck,
+    Node::{self, PeristenceMode},
+    NodeBlock0, NodeController, Wallet,
 };
 use chain_impl_mockchain::block::HeaderHash;
 use indicatif::{MultiProgress, ProgressBar};
@@ -149,17 +151,21 @@ impl Controller {
         }
     }
 
-    pub fn spawn_node(&mut self, node_alias: &str, with_block0: bool) -> Result<NodeController> {
-        let node_setting = if let Some(node_setting) = self.settings.nodes.get(node_alias) {
+    pub fn spawn_node(
+        &mut self,
+        node_alias: &str,
+        leadership_mode: LeadershipMode,
+        persistence_mode: PeristenceMode,
+    ) -> Result<NodeController> {
+        let mut node_setting = if let Some(node_setting) = self.settings.nodes.get(node_alias) {
             node_setting
         } else {
             bail!(ErrorKind::NodeNotFound(node_alias.to_owned()))
         };
 
-        let block0_setting = if with_block0 {
-            NodeBlock0::File(self.block0_file.as_path().into())
-        } else {
-            NodeBlock0::Hash(self.block0_hash.clone())
+        let block0_setting = match leadership_mode {
+            LeadershipMode::Leader => NodeBlock0::File(self.block0_file.as_path().into()),
+            LeadershipMode::Passive => NodeBlock0::Hash(self.block0_hash.clone()),
         };
 
         let pb = ProgressBar::new_spinner();
@@ -169,9 +175,10 @@ impl Controller {
             &self.context,
             pb,
             node_alias,
-            node_setting,
+            &mut node_setting.clone(),
             block0_setting,
             &self.working_directory,
+            persitent,
         )?;
         let controller = node.controller();
 
