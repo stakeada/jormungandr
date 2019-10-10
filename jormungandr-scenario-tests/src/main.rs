@@ -1,7 +1,13 @@
 #[macro_use]
 extern crate jormungandr_scenario_tests;
 
-use jormungandr_scenario_tests::{prepare_command, style, Context, Seed};
+use jormungandr_scenario_tests::{
+    node::{LeadershipMode, PersistenceMode},
+    prepare_command, style,
+    test::{comm::*, network::topology::scenarios::*},
+    Context, Seed,
+};
+use std::collections::HashMap;
 use std::{path::PathBuf, thread, time::Duration};
 use structopt::StructOpt;
 
@@ -16,6 +22,8 @@ struct CommandArgs {
     #[structopt(long = "jcli", default_value = "jcli")]
     jcli: PathBuf,
 
+    #[structopt(long = "scenario", default_value = "scenario_1")]
+    scenario: String,
     /// set a directory in which the tests will be run, allowing every details
     /// to be save persistently. By default it will create temporary directories
     /// and will delete the files and documents
@@ -55,7 +63,51 @@ fn main() {
 
     introduction(&context);
 
-    scenario_2(context.derive());
+    run_scenario_by_name(command_args.scenario, context);
+}
+
+pub fn run_scenario_by_name(scenario: String, mut context: Context<ChaChaRng>) {
+    let repo = scenarios_repository();
+    if !repo.contains_key(&scenario) {
+        panic!(format!(
+            "Cannot find scenario '{}'. Available are: {:?}",
+            scenario,
+            repo.keys().cloned().collect::<Vec<String>>()
+        ));
+    }
+
+    let scenario_to_run = repo.get(&scenario).unwrap();
+    scenario_to_run(context.derive());
+}
+
+type ScenarioMethod = fn(Context<ChaChaRng>) -> ();
+
+pub fn scenarios_repository() -> HashMap<String, ScenarioMethod> {
+    let mut map: HashMap<String, ScenarioMethod> = HashMap::new();
+    map.insert(
+        "two_transaction_to_two_leaders".to_string(),
+        two_transaction_to_two_leaders,
+    );
+    map.insert("transaction_to_passive".to_string(), transaction_to_passive);
+    map.insert("leader_is_offline".to_string(), leader_is_offline);
+    map.insert(
+        "leader_is_online_with_delay".to_string(),
+        leader_is_online_with_delay,
+    );
+    map.insert("leader_restart".to_string(), leader_restart);
+    map.insert(
+        "passive_node_is_updated".to_string(),
+        passive_node_is_updated,
+    );
+    map.insert("star".to_string(), star);
+    map.insert("ring".to_string(), ring);
+    map.insert("mesh".to_string(), mesh);
+    map.insert("point_to_point".to_string(), point_to_point);
+    map.insert("tree".to_string(), tree);
+    map.insert("relay".to_string(), relay);
+    map.insert("scenario_1".to_string(), scenario_1);
+    map.insert("scenario_2".to_string(), scenario_2);
+    map
 }
 
 fn introduction<R: rand_core::RngCore>(context: &Context<R>) {
@@ -117,15 +169,19 @@ pub fn scenario_1(mut context: Context<ChaChaRng>) {
 
     let mut controller = scenario_settings.build(context).unwrap();
 
-    let node1 = controller.spawn_node("node1", true).unwrap();
-    let node2 = controller.spawn_node("node2", false).unwrap();
+    let node1 = controller
+        .spawn_node("node1", LeadershipMode::Leader, PersistenceMode::InMemory)
+        .unwrap();
+    let node2 = controller
+        .spawn_node("node2", LeadershipMode::Passive, PersistenceMode::InMemory)
+        .unwrap();
 
     controller.monitor_nodes();
     std::thread::sleep(std::time::Duration::from_secs(10));
-    let tip1 = node1.get_tip().unwrap();
+    let tip1 = node1.tip().unwrap();
     std::thread::sleep(std::time::Duration::from_secs(1));
     node1.shutdown().unwrap();
-    let _block = node2.get_block(&tip1).unwrap();
+    let _block = node2.block(&tip1).unwrap();
 
     std::thread::sleep(std::time::Duration::from_secs(1));
 
@@ -161,11 +217,31 @@ pub fn scenario_2(mut context: Context<ChaChaRng>) {
 
     let mut controller = scenario_settings.build(context).unwrap();
 
-    let leader1 = controller.spawn_node("Leader1", true).unwrap();
+    let leader1 = controller
+        .spawn_node("Leader1", LeadershipMode::Leader, PersistenceMode::InMemory)
+        .unwrap();
     thread::sleep(Duration::from_secs(1));
-    let passive1 = controller.spawn_node("Passive1", false).unwrap();
-    let _passive2 = controller.spawn_node("Passive2", false).unwrap();
-    let _passive3 = controller.spawn_node("Passive3", false).unwrap();
+    let passive1 = controller
+        .spawn_node(
+            "Passive1",
+            LeadershipMode::Passive,
+            PersistenceMode::InMemory,
+        )
+        .unwrap();
+    let _passive2 = controller
+        .spawn_node(
+            "Passive2",
+            LeadershipMode::Passive,
+            PersistenceMode::InMemory,
+        )
+        .unwrap();
+    let _passive3 = controller
+        .spawn_node(
+            "Passive3",
+            LeadershipMode::Passive,
+            PersistenceMode::InMemory,
+        )
+        .unwrap();
 
     controller.monitor_nodes();
 
