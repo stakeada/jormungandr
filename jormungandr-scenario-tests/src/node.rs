@@ -5,6 +5,7 @@ use chain_impl_mockchain::{
     fragment::{Fragment, FragmentId},
 };
 use indicatif::ProgressBar;
+use jormungandr_integration_tests::mock::client::JormungandrClient;
 use jormungandr_lib::interfaces::{FragmentLog, FragmentStatus, Stats};
 use rand_core::RngCore;
 use std::{
@@ -83,6 +84,7 @@ struct ProgressBarController {
 #[derive(Clone)]
 pub struct NodeController {
     alias: NodeAlias,
+    grpc_client: JormungandrClient,
     settings: NodeSetting,
     progress_bar: ProgressBarController,
     status: Arc<Mutex<Status>>,
@@ -192,6 +194,31 @@ impl NodeController {
         Ok(hash)
     }
 
+    pub fn get_blocks_to_tip(&self, from: HeaderHash) -> Result<Vec<Block>> {
+        let blocks = self.grpc_client.pull_blocks_to_tip(from);
+        Ok(blocks)
+    }
+
+    pub fn get_all_blocks_hashes(&self) -> Result<Vec<HeaderHash>> {
+        let genesis_hash = self
+            .get_genesis_block_hash()
+            .expect("Cannot download genesis hash");
+        self.get_blocks_hashes_to_tip(genesis_hash)
+    }
+
+    pub fn get_blocks_hashes_to_tip(&self, from: HeaderHash) -> Result<Vec<HeaderHash>> {
+        Ok(self
+            .get_blocks_to_tip(from)
+            .unwrap()
+            .iter()
+            .map(|x| x.header.hash())
+            .collect())
+    }
+
+    pub fn get_genesis_block_hash(&self) -> Result<HeaderHash> {
+        Ok(self.grpc_client.get_genesis_block_hash())
+    }
+
     pub fn get_block(&self, header_hash: &HeaderHash) -> Result<Block> {
         use chain_core::mempack::{ReadBuf, Readable as _};
 
@@ -294,8 +321,12 @@ impl Node {
     }
 
     pub fn controller(&self) -> NodeController {
+        let p2p_address = format!("{}", self.node_settings.config().p2p.public_address);
+
         NodeController {
             alias: self.alias().clone(),
+            grpc_client: JormungandrClient::from_address(&p2p_address)
+                .expect("cannot setup grpc client"),
             settings: self.node_settings.clone(),
             status: self.status.clone(),
             progress_bar: self.progress_bar.clone(),
