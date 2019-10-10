@@ -5,10 +5,8 @@ use crate::common::{
     process_utils::{self, output_extensions::ProcessOutput},
 };
 
-use chain_crypto::{Ed25519, SecretKey};
 use chain_impl_mockchain::{
-    certificate::PoolId, key::EitherEd25519SecretKey,
-    testing::builders::cert_builder::build_stake_pool_retirement_cert,
+    certificate::PoolId, testing::builders::cert_builder::build_stake_pool_retirement_cert,
 };
 
 extern crate jcli;

@@ -7,10 +7,7 @@ extern crate hex;
 extern crate protobuf;
 
 use crate::mock::{
-    grpc::{
-        ClientStubExt, Error as GrpcError, GrpcMessageError, Metadata, RequestOptions,
-        StreamingResponse,
-    },
+    grpc::{ClientStubExt, Error as GrpcError, Metadata},
     proto::{node::*, node_grpc::*},
     read_into,
 };
@@ -63,7 +60,7 @@ impl JormungandrClient {
         let port: u16 = port
             .unwrap()
             .parse()
-            .map_err(|err| ErrorKind::InvalidAddressFormat(address.to_owned()))?;
+            .map_err(|_err| ErrorKind::InvalidAddressFormat(address.to_owned()))?;
         Ok(Self::new(host.unwrap(), port))
     }
 
