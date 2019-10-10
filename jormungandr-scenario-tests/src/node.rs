@@ -74,7 +74,7 @@ pub enum LeadershipMode {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum PeristenceMode {
+pub enum PersistenceMode {
     Persistent,
     InMemory,
 }
@@ -197,7 +197,7 @@ impl NodeController {
         })
     }
 
-    pub fn get_tip(&self) -> Result<HeaderHash> {
+    pub fn tip(&self) -> Result<HeaderHash> {
         let hash = self.get("tip")?.text()?;
 
         let hash = hash.parse().chain_err(|| ErrorKind::InvalidHeaderHash)?;
@@ -207,32 +207,32 @@ impl NodeController {
         Ok(hash)
     }
 
-    pub fn get_blocks_to_tip(&self, from: HeaderHash) -> Result<Vec<Block>> {
+    pub fn blocks_to_tip(&self, from: HeaderHash) -> Result<Vec<Block>> {
         let blocks = self.grpc_client.pull_blocks_to_tip(from);
         Ok(blocks)
     }
 
-    pub fn get_all_blocks_hashes(&self) -> Result<Vec<HeaderHash>> {
+    pub fn all_blocks_hashes(&self) -> Result<Vec<HeaderHash>> {
         let genesis_hash = self
-            .get_genesis_block_hash()
+            .genesis_block_hash()
             .expect("Cannot download genesis hash");
-        self.get_blocks_hashes_to_tip(genesis_hash)
+        self.blocks_hashes_to_tip(genesis_hash)
     }
 
-    pub fn get_blocks_hashes_to_tip(&self, from: HeaderHash) -> Result<Vec<HeaderHash>> {
+    pub fn blocks_hashes_to_tip(&self, from: HeaderHash) -> Result<Vec<HeaderHash>> {
         Ok(self
-            .get_blocks_to_tip(from)
+            .blocks_to_tip(from)
             .unwrap()
             .iter()
             .map(|x| x.header.hash())
             .collect())
     }
 
-    pub fn get_genesis_block_hash(&self) -> Result<HeaderHash> {
+    pub fn genesis_block_hash(&self) -> Result<HeaderHash> {
         Ok(self.grpc_client.get_genesis_block_hash())
     }
 
-    pub fn get_block(&self, header_hash: &HeaderHash) -> Result<Block> {
+    pub fn block(&self, header_hash: &HeaderHash) -> Result<Block> {
         use chain_core::mempack::{ReadBuf, Readable as _};
 
         let mut resp = self.get(&format!("block/{}", header_hash))?;
@@ -353,7 +353,7 @@ impl Node {
         node_settings: &mut NodeSetting,
         block0: NodeBlock0,
         working_dir: &PathBuf,
-        peristence_mode: PeristenceMode,
+        peristence_mode: PersistenceMode,
     ) -> Result<Self> {
         let mut command = context.jormungandr().clone();
         let dir = working_dir.join(alias);
@@ -367,7 +367,7 @@ impl Node {
         let config_file = dir.join(NODE_CONFIG);
         let config_secret = dir.join(NODE_SECRET);
 
-        if persistent == PeristenceMode::Persistent {
+        if peristence_mode == PersistenceMode::Persistent {
             let path_to_storage = dir.join(NODE_STORAGE);
             node_settings.config.storage = Some(path_to_storage);
         }

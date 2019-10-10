@@ -1,9 +1,8 @@
 use crate::scenario::settings::NodeSetting;
 use crate::{
+    node::{LeadershipMode, Node, PersistenceMode},
     scenario::{settings::Settings, Blockchain, ContextChaCha, ErrorKind, Result, Topology},
-    style, MemPoolCheck,
-    Node::{self, PeristenceMode},
-    NodeBlock0, NodeController, Wallet,
+    style, MemPoolCheck, NodeBlock0, NodeController, Wallet,
 };
 use chain_impl_mockchain::block::HeaderHash;
 use indicatif::{MultiProgress, ProgressBar};
@@ -155,7 +154,7 @@ impl Controller {
         &mut self,
         node_alias: &str,
         leadership_mode: LeadershipMode,
-        persistence_mode: PeristenceMode,
+        persistence_mode: PersistenceMode,
     ) -> Result<NodeController> {
         let mut node_setting = if let Some(node_setting) = self.settings.nodes.get(node_alias) {
             node_setting
@@ -178,7 +177,7 @@ impl Controller {
             &mut node_setting.clone(),
             block0_setting,
             &self.working_directory,
-            persitent,
+            persistence_mode,
         )?;
         let controller = node.controller();
 
