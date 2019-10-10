@@ -1,5 +1,9 @@
+use crate::common::{
+    configuration::genesis_model::Fund, jcli_wrapper, jcli_wrapper::JCLITransactionWrapper,
+    jormungandr::logger::Level, startup, startup::ConfigurationBuilder,
+};
+use crate::mock::client::{Error as MockClientError, ErrorKind::*};
 use crate::mock::testing::{setup::bootstrap_node, setup::Config};
-
 use crate::common::{
     configuration::genesis_model::Fund, jcli_wrapper, jcli_wrapper::JCLITransactionWrapper,
     jormungandr::logger::Level, startup, startup::ConfigurationBuilder,
@@ -231,8 +235,8 @@ pub fn upload_block_incompatible_protocol() {
 
     let err = client.upload_blocks_err(block);
     match err {
-        grpc::Error::GrpcMessage(grpc_error_message) => {
-            assert_eq!(grpc_error_message.grpc_message, "invalid%20request%20data");
+        MockClientError(InvalidRequest(message), _) => {
+            assert!(message.contains("invalid%20request%20data"));
         }
         _ => panic!("Wrong error"),
     }
@@ -274,9 +278,10 @@ pub fn upload_block_nonexisting_stake_pool() {
         .build(&stake_pool, &time_era);
 
     let err = client.upload_blocks_err(block);
+    println!("{}", err);
     match err {
-        grpc::Error::GrpcMessage(grpc_error_message) => {
-            assert_eq!(grpc_error_message.grpc_message, "invalid%20request%20data");
+        MockClientError(InvalidRequest(message), _) => {
+            assert!(message.contains("invalid%20request%20data"));
         }
         _ => panic!("Wrong error"),
     }

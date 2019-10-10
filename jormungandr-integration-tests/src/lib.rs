@@ -4,6 +4,8 @@ extern crate lazy_static;
 
 #[macro_use]
 extern crate slog;
+#[macro_use(error_chain, bail)]
+extern crate error_chain;
 
 #[cfg(test)]
 pub mod jcli;

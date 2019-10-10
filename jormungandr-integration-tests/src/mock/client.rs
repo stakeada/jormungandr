@@ -7,7 +7,10 @@ extern crate hex;
 extern crate protobuf;
 
 use crate::mock::{
-    grpc::*,
+    grpc::{
+        ClientStubExt, Error as GrpcError, GrpcMessageError, Metadata, RequestOptions,
+        StreamingResponse,
+    },
     proto::{node::*, node_grpc::*},
     read_into,
 };
@@ -20,6 +23,19 @@ use chain_impl_mockchain::{
     key::Hash,
 };
 use protobuf::RepeatedField;
+
+error_chain! {
+    errors {
+        InvalidRequest (message: String) {
+            display("request failed with message {}", message),
+        }
+
+        InvalidAddressFormat (address: String) {
+            display("could not parse address '{}'. HINT: accepted format example: /ip4/127.0.0.1/tcp/9000", address),
+        }
+
+    }
+}
 
 pub struct JormungandrClient {
     client: NodeClient,
@@ -34,6 +50,23 @@ impl Clone for JormungandrClient {
 }
 
 impl JormungandrClient {
+    pub fn from_address(address: &str) -> Result<Self> {
+        let elements: Vec<&str> = address.split("/").collect();
+
+        let host = elements.get(2);
+        let port = elements.get(4);
+
+        if host.is_none() || port.is_none() {
+            return Err(ErrorKind::InvalidAddressFormat(address.to_owned()).into());
+        }
+
+        let port: u16 = port
+            .unwrap()
+            .parse()
+            .map_err(|err| ErrorKind::InvalidAddressFormat(address.to_owned()))?;
+        Ok(Self::new(host.unwrap(), port))
+    }
+
     pub fn new(host: &str, port: u16) -> Self {
         let client_conf = Default::default();
         let client = NodeClient::new_plain(host, port, client_conf).unwrap();
@@ -119,6 +152,7 @@ impl JormungandrClient {
             grpc::StreamingRequest::single(block),
         );
         resp.wait()
+            .map_err(|err| ErrorKind::InvalidRequest(err.to_string()).into())
     }
 
     pub fn upload_blocks(&self, chain_block: ChainBlock) -> UploadBlocksResponse {
@@ -126,7 +160,7 @@ impl JormungandrClient {
         response
     }
 
-    pub fn upload_blocks_err(&self, chain_block: ChainBlock) -> grpc::Error {
+    pub fn upload_blocks_err(&self, chain_block: ChainBlock) -> Error {
         self.upload_blocks_internal(chain_block).err().unwrap()
     }
 
@@ -158,7 +192,7 @@ impl JormungandrClient {
             .collect()
     }
 
-    pub fn pull_headers_get_err(&self, from: Option<Hash>, to: Option<Hash>) -> grpc::Error {
+    pub fn pull_headers_get_err(&self, from: Option<Hash>, to: Option<Hash>) -> GrpcError {
         self.pull_headers_stream(from, to)
             .into_future()
             .wait_drop_metadata()
@@ -188,7 +222,7 @@ impl JormungandrClient {
         push_headers_response
     }
 
-    pub fn push_header_err(&self, chain_header: chain::block::Header) -> grpc::Error {
+    pub fn push_header_err(&self, chain_header: chain::block::Header) -> Error {
         self.push_header_internal(chain_header).err().unwrap()
     }
 
@@ -203,6 +237,7 @@ impl JormungandrClient {
             grpc::StreamingRequest::single(header),
         );
         resp.wait()
+            .map_err(|err| ErrorKind::InvalidRequest(err.to_string()).into())
     }
 
     pub fn get_fragments(&self, ids: Vec<Hash>) -> Vec<ChainFragment> {
@@ -215,7 +250,7 @@ impl JormungandrClient {
             .collect()
     }
 
-    pub fn get_fragments_err(&self, ids: Vec<Hash>) -> grpc::Error {
+    pub fn get_fragments_err(&self, ids: Vec<Hash>) -> GrpcError {
         self.get_fragments_stream(ids)
             .into_future()
             .wait_drop_metadata()
