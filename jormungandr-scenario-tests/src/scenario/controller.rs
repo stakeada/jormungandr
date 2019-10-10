@@ -1,3 +1,4 @@
+use crate::scenario::settings::NodeSetting;
 use crate::{
     scenario::{settings::Settings, Blockchain, ContextChaCha, ErrorKind, Result, Topology},
     style, MemPoolCheck, Node, NodeBlock0, NodeController, Wallet,
