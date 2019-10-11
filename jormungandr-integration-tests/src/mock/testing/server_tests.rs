@@ -12,7 +12,7 @@ use chain_core::property::FromStr;
 use chain_impl_mockchain::key::Hash;
 use std::{
     thread::{self, JoinHandle},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 pub fn start_mock<F: 'static>(
@@ -37,7 +37,14 @@ where
             protocol_version,
             log_file.clone(),
         );
+
+        let start = Instant::now();
+        let timeout = Duration::from_secs(120);
+
         loop {
+            if start.elapsed() > timeout {
+                return;
+            }
             if stop_func(&logger) {
                 return;
             }
@@ -96,7 +103,9 @@ pub fn wrong_genesis_hash() {
     mock_thread.join().expect("mock thread error");
 
     assert!(server.logger.get_log_entries().any(|x| {
-        x.msg == "block 0 hash" && x.peer_addr == peer_addr(mock_port) && x.level == Level::WARN
+        x.msg.contains("block 0 hash")
+            && x.peer_addr == peer_addr(mock_port)
+            && x.level == Level::WARN
     }));
 }
 
@@ -121,26 +130,6 @@ pub fn handshake_ok() {
         .logger
         .get_log_entries()
         .any(|x| { x.peer_addr == peer_addr(mock_port) && x.level == Level::WARN }));
-}
-// L1007 Tip request malformed hash
-
-#[test]
-pub fn tip_request_malformed_hash() {
-    let mock_port = configuration::get_available_port();
-    let mut config = build_configuration(mock_port);
-
-    let mock_thread = start_mock(
-        mock_port,
-        Hash::from_str(&config.genesis_block_hash).unwrap(),
-        Hash::from_str("efo2d4e5c4ad84b8e67e7b5676fff41cad5902a60b8cb6f072f42d7c7d26c944").unwrap(),
-        ProtocolVersion::GenesisPraos,
-        |logger: &MockLogger| logger.executed_at_least_once(MethodType::Tip),
-    );
-
-    let server = start_jormungandr_node_as_leader(&mut config);
-    mock_thread.join().expect("mock thread error");
-
-    println!("{}", server.logger.get_log_content());
 }
 
 //L1008 Tip request hash discrepancy

@@ -102,7 +102,7 @@ impl JormungandrLogger {
         serde_json::from_str(&line)
     }
 
-    fn get_lines_from_log(&self) -> impl Iterator<Item = String> {
+    pub fn get_lines_from_log(&self) -> impl Iterator<Item = String> {
         let file = File::open(self.log_file_path.clone())
             .expect(&format!("cannot find log file: {:?}", &self.log_file_path));
         let reader = BufReader::new(file);

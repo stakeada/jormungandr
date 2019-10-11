@@ -1,5 +1,9 @@
-/*use crate::mock::testing::{setup::bootstrap_node, setup::Config};
+use crate::mock::testing::{setup::bootstrap_node, setup::Config};
 
+use crate::common::{
+    configuration::genesis_model::Fund, jcli_wrapper, jcli_wrapper::JCLITransactionWrapper,
+    jormungandr::logger::Level, startup, startup::ConfigurationBuilder,
+};
 use chain_core::property::FromStr;
 use chain_impl_mockchain::{
     fragment::Fragment as ChainFragment,
@@ -7,10 +11,6 @@ use chain_impl_mockchain::{
     testing::builders::{GenesisPraosBlockBuilder, StakePoolBuilder},
 };
 use chain_time::{Epoch, TimeEra};
-use crate::common::{
-    configuration::genesis_model::Fund, jcli_wrapper, jcli_wrapper::JCLITransactionWrapper,
-    startup, startup::ConfigurationBuilder, jormungandr::logger::Level
-};
 
 // L1001 Handshake sanity
 #[test]
@@ -200,7 +200,10 @@ pub fn push_headers() {
         .build(&stake_pool, &time_era);
 
     client.push_header(block.header);
-    assert_eq!(server.logger.get_lines_with_error().count(), 0);
+    assert!(server
+        .logger
+        .get_lines_from_log()
+        .any(|line| line.contains("thread \'block0\' panicked at \'not yet implemented\'")));
 }
 
 // L1020 Push headers incorrect header
@@ -300,7 +303,7 @@ pub fn get_fragments() {
         }])
         .build();
 
-    let _server = startup::start_jormungandr_node_as_leader(&mut config);
+    let server = startup::start_jormungandr_node_as_leader(&mut config);
     let jormungandr_rest_address = config.get_node_address();
 
     let transaction = JCLITransactionWrapper::new_transaction(&config.genesis_block_hash)
@@ -313,12 +316,17 @@ pub fn get_fragments() {
     let fragment_id =
         jcli_wrapper::assert_transaction_in_block(&transaction, &jormungandr_rest_address);
     let client = Config::attach_to_local_node(config.node_config.get_p2p_port()).client();
-    let fragments = client.get_fragments(vec![fragment_id.into_hash()]);
+    let error = client.get_fragments_err(vec![fragment_id.into_hash()]);
+    match client.get_fragments_err(vec![fragment_id.into_hash()]) {
+        grpc::Error::Http(_) => (),
+        _ => panic!("Wrong error"),
+    };
+    assert!(server.logger.get_lines_from_log().any(|line| line
+        .contains("thread \'tokio-runtime-worker-0\' panicked at \'not yet implemented\'")));
 
-    assert_eq!(fragments.len(), 1);
+    /*assert_eq!(fragments.len(), 1);
     match fragments.iter().next().unwrap() {
         ChainFragment::Transaction(_tx) => (),
         _ => panic!("wrong fragment return from grpc"),
-    }
+    }*/
 }
-*/
