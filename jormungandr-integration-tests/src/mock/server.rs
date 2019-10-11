@@ -43,6 +43,7 @@ pub fn start(
     let mut server = grpc::ServerBuilder::new_plain();
     server.http.set_port(port);
     server.add_service(NodeServer::new_service_def(JormungandrServerImpl::new(
+        port,
         genesis_hash,
         tip,
         version,
@@ -50,7 +51,6 @@ pub fn start(
     )));
 
     let server = server.build().expect("server");
-    println!("mock node started on port {}", port);
     server
 }
 
@@ -61,6 +61,7 @@ pub struct MockLogger {
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub enum MethodType {
+    Init,
     Handshake,
     PullBlocksToTip,
     Tip,
@@ -170,12 +171,15 @@ impl JormungandrServerImpl {
     }
 
     pub fn new(
+        port: u16,
         genesis_hash: Hash,
         tip: Hash,
         protocol: ProtocolVersion,
         log_path: PathBuf,
     ) -> Self {
         let log = JormungandrServerImpl::init_logger(log_path);
+        info!(log, "{}", format!("mock node started on port {}", port); "method" => MethodType::Init.to_string());
+
         JormungandrServerImpl {
             genesis_hash,
             tip,
