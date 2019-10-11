@@ -64,6 +64,15 @@ pub enum MethodType {
     Handshake,
     PullBlocksToTip,
     Tip,
+    GetBlocks,
+    GetHeaders,
+    GetFragments,
+    PullHeaders,
+    PushHeaders,
+    UploadBlocks,
+    BlockSubscription,
+    ContentSubscription,
+    GossipSubscription,
 }
 
 impl fmt::Display for MethodType {
@@ -211,7 +220,7 @@ impl Node for JormungandrServerImpl {
         _o: ::grpc::RequestOptions,
         _p: BlockIds,
     ) -> ::grpc::StreamingResponse<Block> {
-        println!("get_blocks");
+        info!(self.log,"Get blocks request recieved";"method" => MethodType::GetBlocks.to_string());
         ::grpc::StreamingResponse::empty()
     }
 
@@ -220,7 +229,7 @@ impl Node for JormungandrServerImpl {
         _o: ::grpc::RequestOptions,
         _p: BlockIds,
     ) -> ::grpc::StreamingResponse<Header> {
-        println!("get_headers");
+        info!(self.log,"Get headers request recieved";"method" => MethodType::GetHeaders.to_string());
         ::grpc::StreamingResponse::empty()
     }
 
@@ -229,7 +238,7 @@ impl Node for JormungandrServerImpl {
         _o: ::grpc::RequestOptions,
         _p: FragmentIds,
     ) -> ::grpc::StreamingResponse<Fragment> {
-        println!("get_fragments");
+        info!(self.log,"Get fragments request recieved";"method" => MethodType::GetFragments.to_string());
         ::grpc::StreamingResponse::empty()
     }
 
@@ -238,7 +247,7 @@ impl Node for JormungandrServerImpl {
         _o: ::grpc::RequestOptions,
         _p: PullHeadersRequest,
     ) -> ::grpc::StreamingResponse<Header> {
-        println!("pull_headers");
+        info!(self.log,"Pull Headers request recieved";"method" => MethodType::PullHeaders.to_string());
         ::grpc::StreamingResponse::empty()
     }
 
@@ -260,7 +269,7 @@ impl Node for JormungandrServerImpl {
         _o: ::grpc::RequestOptions,
         _p: ::grpc::StreamingRequest<Header>,
     ) -> ::grpc::SingleResponse<PushHeadersResponse> {
-        println!("push_headers");
+        info!(self.log,"Push headers method recieved";"method" => MethodType::PushHeaders.to_string());
         let header_response = PushHeadersResponse::new();
         ::grpc::SingleResponse::completed(header_response)
     }
@@ -270,7 +279,7 @@ impl Node for JormungandrServerImpl {
         _o: ::grpc::RequestOptions,
         _p: ::grpc::StreamingRequest<Block>,
     ) -> ::grpc::SingleResponse<UploadBlocksResponse> {
-        println!("upload_blocks");
+        info!(self.log,"Upload blocks method recieved";"method" => MethodType::UploadBlocks.to_string());
         let block_response = UploadBlocksResponse::new();
         ::grpc::SingleResponse::completed(block_response)
     }
@@ -280,7 +289,7 @@ impl Node for JormungandrServerImpl {
         _o: ::grpc::RequestOptions,
         _p: ::grpc::StreamingRequest<Header>,
     ) -> ::grpc::StreamingResponse<BlockEvent> {
-        println!("block_subscription");
+        info!(self.log,"Block subscription event recieved";"method" => MethodType::BlockSubscription.to_string());
         ::grpc::StreamingResponse::completed_with_metadata_and_trailing_metadata(
             get_metadata(),
             iter::from_fn(|| None).collect(),
@@ -293,7 +302,7 @@ impl Node for JormungandrServerImpl {
         _o: ::grpc::RequestOptions,
         _p: ::grpc::StreamingRequest<Fragment>,
     ) -> ::grpc::StreamingResponse<Fragment> {
-        println!("content_subscription");
+        info!(self.log,"Content subscription event recieved";"method" => MethodType::ContentSubscription.to_string());
         ::grpc::StreamingResponse::empty()
     }
 
@@ -302,7 +311,7 @@ impl Node for JormungandrServerImpl {
         _o: ::grpc::RequestOptions,
         _p: ::grpc::StreamingRequest<Gossip>,
     ) -> ::grpc::StreamingResponse<Gossip> {
-        println!("gossip_subscription");
+        info!(self.log,"Gossip subscription event recieved";"method" => MethodType::GossipSubscription.to_string());
         ::grpc::StreamingResponse::completed_with_metadata_and_trailing_metadata(
             get_metadata(),
             iter::from_fn(|| None).collect(),
