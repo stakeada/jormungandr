@@ -4,13 +4,8 @@ use crate::common::{
 };
 use crate::mock::client::{Error as MockClientError, ErrorKind::*};
 use crate::mock::testing::{setup::bootstrap_node, setup::Config};
-use crate::common::{
-    configuration::genesis_model::Fund, jcli_wrapper, jcli_wrapper::JCLITransactionWrapper,
-    jormungandr::logger::Level, startup, startup::ConfigurationBuilder,
-};
 use chain_core::property::FromStr;
 use chain_impl_mockchain::{
-    fragment::Fragment as ChainFragment,
     key::Hash,
     testing::builders::{GenesisPraosBlockBuilder, StakePoolBuilder},
 };
@@ -322,7 +317,7 @@ pub fn get_fragments() {
         jcli_wrapper::assert_transaction_in_block(&transaction, &jormungandr_rest_address);
     let client = Config::attach_to_local_node(config.node_config.get_p2p_port()).client();
     let error = client.get_fragments_err(vec![fragment_id.into_hash()]);
-    match client.get_fragments_err(vec![fragment_id.into_hash()]) {
+    match error {
         grpc::Error::Http(_) => (),
         _ => panic!("Wrong error"),
     };

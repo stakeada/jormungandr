@@ -24,7 +24,7 @@ pub fn two_nodes_communication() {
         .build();
 
     let _trusted_jormungandr = startup::start_jormungandr_node_as_passive(&mut trusted_node_config);
-    let leader_jormungandr_rest_address = leader_config.get_node_address();
+    let _leader_jormungandr_rest_address = leader_config.get_node_address();
     let trusted_jormungandr_rest_address = trusted_node_config.get_node_address();
 
     let utxo = startup::get_utxo_for_address(&sender, &trusted_jormungandr_rest_address);

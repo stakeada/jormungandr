@@ -5,9 +5,6 @@ extern crate futures_cpupool;
 extern crate grpc;
 extern crate hex;
 
-use chain_core::mempack::ReadBuf;
-use chain_core::mempack::Readable;
-use chain_impl_mockchain as chain;
 use jormungandr_integration_tests::mock::client::JormungandrClient;
 use std::env;
 

@@ -7,24 +7,12 @@ use crate::common::{
         jcli_transaction_wrapper::JCLITransactionWrapper,
     },
     jormungandr::starter,
-    process_utils, startup,
+    startup,
 };
 
 use chain_addr::Discrimination;
-use jormungandr_lib::{
-    crypto::hash::Hash,
-    interfaces::{Certificate, Value},
-};
+use jormungandr_lib::{crypto::hash::Hash, interfaces::Value};
 use std::str::FromStr;
-use std::time::SystemTime;
-
-fn create_account_from_secret_key(private_key: String) -> Account {
-    let public_key = jcli_wrapper::assert_key_to_public_default(&private_key);
-    let address = jcli_wrapper::assert_address_single(&public_key, Discrimination::Test);
-    Account::new(&private_key, &public_key, &address)
-}
-
-use std::env;
 
 #[test]
 pub fn create_delegate_retire_stake_pool() {
@@ -43,7 +31,7 @@ pub fn create_delegate_retire_stake_pool() {
         .build();
 
     let jormungandr_rest_address = config.get_node_address();
-    let jormungandr = starter::start_jormungandr_node_as_leader(&mut config);
+    let _jormungandr = starter::start_jormungandr_node_as_leader(&mut config);
     let block0_hash = config.genesis_block_hash;
 
     let stake_pool_id = create_new_stake_pool(

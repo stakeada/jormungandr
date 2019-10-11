@@ -17,7 +17,7 @@ pub fn test_node_recovers_from_node_restart() {
         .build();
 
     let jormungandr_rest_address = config.get_node_address().clone();
-    let mut jormungandr = startup::start_jormungandr_node_as_leader(&mut config);
+    let jormungandr = startup::start_jormungandr_node_as_leader(&mut config);
 
     let utxo = startup::get_utxo_for_address(&sender, &jormungandr_rest_address);
 
@@ -38,7 +38,7 @@ pub fn test_node_recovers_from_node_restart() {
         &jormungandr_rest_address,
     );
 
-    let jormungandr = starter::restart_jormungandr_node_as_leader(jormungandr);
+    let _jormungandr = starter::restart_jormungandr_node_as_leader(jormungandr);
 
     let actual_settings = jcli_wrapper::assert_get_rest_settings(&jormungandr_rest_address);
     let actual_utxos = jcli_wrapper::assert_rest_utxo_get(&jormungandr_rest_address);
