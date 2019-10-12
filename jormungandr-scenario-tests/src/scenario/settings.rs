@@ -9,10 +9,7 @@ use chain_crypto::{Curve25519_2HashDH, Ed25519, SumEd25519_12};
 use chain_impl_mockchain::{block::ConsensusVersion, fee::LinearFee, rewards::TaxType};
 use chain_time::DurationSeconds;
 use jormungandr_lib::{
-    crypto::{
-        hash::Hash,
-        key::{Identifier, SigningKey},
-    },
+    crypto::{hash::Hash, key::SigningKey},
     interfaces::{Block0Configuration, BlockchainConfiguration, Initial, InitialUTxO},
 };
 use rand_core::{CryptoRng, RngCore};
@@ -62,19 +59,9 @@ pub struct P2pConfig {
     /// The public address to which other peers may connect to
     pub public_address: poldercast::Address,
 
-    pub private_id: SigningKey<Ed25519>,
-
     /// the rendezvous points for the peer to connect to in order to initiate
     /// the p2p discovery from.
-    pub trusted_peers: Vec<TrustedPeer>,
-
-    allow_private_addresses: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TrustedPeer {
-    address: poldercast::Address,
-    id: Identifier<Ed25519>,
+    pub trusted_peers: Vec<poldercast::Address>,
 }
 
 /// Node Secret(s)
@@ -412,7 +399,7 @@ impl NodeSecret {
 impl NodeConfig {
     pub fn prepare<RNG>(context: &mut Context<RNG>) -> Self
     where
-        RNG: RngCore + CryptoRng,
+        RNG: RngCore,
     {
         NodeConfig {
             rest: Rest::prepare(context),
@@ -435,20 +422,15 @@ impl Rest {
 impl P2pConfig {
     pub fn prepare<RNG>(context: &mut Context<RNG>) -> Self
     where
-        RNG: RngCore + CryptoRng,
+        RNG: RngCore,
     {
         P2pConfig {
             public_address: context.generate_new_grpc_public_address(),
-            private_id: SigningKey::generate(context.rng_mut()),
             trusted_peers: Vec::new(),
-            allow_private_addresses: true,
         }
     }
 
-    fn make_trusted_peer_setting(&self) -> TrustedPeer {
-        TrustedPeer {
-            address: self.public_address.clone(),
-            id: self.private_id.identifier(),
-        }
+    fn make_trusted_peer_setting(&self) -> poldercast::Address {
+        self.public_address.clone()
     }
 }

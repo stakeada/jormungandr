@@ -145,7 +145,7 @@ pub struct PeerComms {
     block_solicitations: CommHandle<Vec<HeaderHash>>,
     chain_pulls: CommHandle<ChainPullRequest<HeaderHash>>,
     fragments: CommHandle<Fragment>,
-    gossip: CommHandle<Gossip<topology::NodeData>>,
+    gossip: CommHandle<Gossip<topology::Node>>,
     stats: PeerStats,
 }
 
@@ -170,8 +170,8 @@ impl PeerComms {
 
     pub fn try_send_gossip(
         &mut self,
-        gossip: Gossip<topology::NodeData>,
-    ) -> Result<(), PropagateError<Gossip<topology::NodeData>>> {
+        gossip: Gossip<topology::Node>,
+    ) -> Result<(), PropagateError<Gossip<topology::Node>>> {
         self.gossip.try_send(gossip)
     }
 
@@ -191,7 +191,7 @@ impl PeerComms {
         self.fragments.subscribe()
     }
 
-    pub fn subscribe_to_gossip(&mut self) -> Subscription<Gossip<topology::NodeData>> {
+    pub fn subscribe_to_gossip(&mut self) -> Subscription<Gossip<topology::Node>> {
         self.gossip.subscribe()
     }
 }
@@ -257,7 +257,7 @@ impl Peers {
     pub fn subscribe_to_gossip(
         &self,
         id: topology::NodeId,
-    ) -> Subscription<Gossip<topology::NodeData>> {
+    ) -> Subscription<Gossip<topology::Node>> {
         let mut map = self.mutex.lock().unwrap();
         let handles = map.ensure_peer_comms(id);
         handles.gossip.subscribe()
@@ -265,9 +265,9 @@ impl Peers {
 
     fn propagate_with<T, F>(
         &self,
-        nodes: Vec<topology::NodeData>,
+        nodes: Vec<topology::Node>,
         f: F,
-    ) -> Result<(), Vec<topology::NodeData>>
+    ) -> Result<(), Vec<topology::Node>>
     where
         F: Fn(&mut PeerComms) -> Result<(), PropagateError<T>>,
     {
@@ -305,9 +305,9 @@ impl Peers {
 
     pub fn propagate_block(
         &self,
-        nodes: Vec<topology::NodeData>,
+        nodes: Vec<topology::Node>,
         header: Header,
-    ) -> Result<(), Vec<topology::NodeData>> {
+    ) -> Result<(), Vec<topology::Node>> {
         self.propagate_with(nodes, |handles| {
             handles.try_send_block_announcement(header.clone())
         })
@@ -315,17 +315,17 @@ impl Peers {
 
     pub fn propagate_fragment(
         &self,
-        nodes: Vec<topology::NodeData>,
+        nodes: Vec<topology::Node>,
         fragment: Fragment,
-    ) -> Result<(), Vec<topology::NodeData>> {
+    ) -> Result<(), Vec<topology::Node>> {
         self.propagate_with(nodes, |handles| handles.try_send_fragment(fragment.clone()))
     }
 
     pub fn propagate_gossip_to(
         &self,
         target: topology::NodeId,
-        gossip: Gossip<topology::NodeData>,
-    ) -> Result<(), Gossip<topology::NodeData>> {
+        gossip: Gossip<topology::Node>,
+    ) -> Result<(), Gossip<topology::Node>> {
         let mut map = self.mutex.lock().unwrap();
         if let Some(mut entry) = map.entry(target) {
             let res = {

@@ -100,6 +100,7 @@ pub struct GlobalState {
     pub block0_hash: HeaderHash,
     pub config: Configuration,
     pub topology: P2pTopology,
+    pub node: topology::Node,
     pub peers: Peers,
     pub executor: TaskExecutor,
     pub logger: Logger,
@@ -116,7 +117,7 @@ impl GlobalState {
         logger: Logger,
     ) -> Self {
         let node_address = config.public_address.clone().map(|addr| addr.0.into());
-        let mut node = topology::Node::new(config.private_id.clone(), node_address);
+        let mut node = topology::Node::new(node_address);
 
         use self::p2p::topology::{NEW_BLOCKS_TOPIC, NEW_MESSAGES_TOPIC};
 
@@ -129,12 +130,14 @@ impl GlobalState {
             }
         }
 
-        let mut topology = P2pTopology::new(node, logger.clone());
+        let mut topology = P2pTopology::new(node.clone(), logger.clone());
         topology.set_poldercast_modules();
         topology.add_module(topology::modules::TrustedPeers::new_with(
-            config.trusted_peers.iter().cloned().map(|trusted_peer| {
-                poldercast::NodeData::new_with(trusted_peer.id, trusted_peer.address)
-            }),
+            config
+                .trusted_peers
+                .iter()
+                .cloned()
+                .map(|trusted_peer| poldercast::Node::new_with(trusted_peer)),
         ));
 
         let peers = Peers::new(config.max_connections, logger.clone());
@@ -143,6 +146,7 @@ impl GlobalState {
             block0_hash,
             config,
             topology,
+            node,
             peers,
             executor,
             logger,
@@ -252,7 +256,7 @@ pub fn start(
                 .and_then(move |(client, mut comms)| {
                     // TODO
                     let node_id = client.remote_node_id();
-                    let gossip = Gossip::from_nodes(iter::once(state.topology.node()));
+                    let gossip = Gossip::from_nodes(iter::once(state.node.clone()));
                     match comms.try_send_gossip(gossip) {
                         Ok(()) => state.peers.insert_peer(node_id, comms),
                         Err(e) => {
@@ -367,7 +371,7 @@ fn send_gossip(state: GlobalStateR, channels: Channels) {
 }
 
 fn connect_and_propagate_with<F>(
-    node: topology::NodeData,
+    node: topology::Node,
     state: GlobalStateR,
     channels: Channels,
     once_connected: F,
@@ -414,7 +418,6 @@ fn connect_and_propagate_with<F>(
                     "peer responded with different node id: {}", connected_node_id
                 );
                 state.peers.remove_peer(node_id);
-                state.topology.evict_node(node_id);
             };
 
             state.peers.insert_peer(connected_node_id, comms);
@@ -437,7 +440,7 @@ fn trusted_peers_shuffled(config: &Configuration) -> Vec<SocketAddr> {
     let mut peers = config
         .trusted_peers
         .iter()
-        .filter_map(|peer| peer.address.to_socketaddr())
+        .filter_map(|peer| peer.to_socketaddr())
         .collect::<Vec<_>>();
     let mut rng = rand::thread_rng();
     peers.shuffle(&mut rng);
