@@ -54,5 +54,5 @@ impl Drop for JormungandrProcess {
     fn drop(&mut self) {
         jcli_wrapper::assert_shutdown_node(&self.config.get_node_address());
         self.logger.print_error_and_invalid_logs();
-        self.logger.print_logs_if_contain_error();    }
+    }
 }
