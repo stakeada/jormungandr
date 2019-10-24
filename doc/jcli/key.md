@@ -35,8 +35,25 @@ jcli key sign <options>
 ```
 
 The options are
+
 -d, --data <data> - path to file with data to sign, if no value is passed, standard input will be
 used
 -o, --output <output> - path to file to write signature into, if no value is passed, standard output
 will be used
 -s, --secret-key <secret_key> - path to file with bech32-encoded secret key
+
+
+## Verifying signed data
+
+Verify signed data with public key. Supported key formats are: ed25519, ed25519bip32 and
+sumed25519_12.
+
+```
+jcli key verify <options>
+```
+
+The options are
+- -d, --data <data> - path to file with signed data, if no value is passed, standard input will be
+used
+- -p, --public-key <public_key> - path to file with bech32-encoded public key
+- -s, --signature <signature> - path to file with signature
